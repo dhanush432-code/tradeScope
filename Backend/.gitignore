@@ -1,8 +1,27 @@
-.DS_Store
-node_modules
-.idea
-package-lock.json
+# --- Dependencies ---
+node_modules/
+
+# --- Build Output ---
+dist/
 /build
-.vscode/
+
+# --- System and IDE Files ---
+.DS_Store
+# Jetbrains IDEs
 .idea/
-vite.config.*s.*
+# VS Code IDE (Ignore personal data, keep useful configs)
+.vscode/
+# Optionally ignore .vscode to keep it entirely out of git, if you prefer:
+# .vscode/
+
+# --- Environment Variables and Secrets ---
+# Crucial for security - never commit env files
+
+# --- Node.js Specifics ---
+# Do NOT ignore package-lock.json (unless you are using npm < v7)
+# npm-debug.log*
+# yarn-error.log*
+
+# --- Vite/Bundler Specifics ---
+# Vite cache directory
+.vite/
