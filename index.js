@@ -101,8 +101,8 @@ app.get('/auth/google/callback',
 // ===================================================
 
 // Auth API endpoints (these go under /api)
-app.get('/api/auth/me', (req, res) => {
-    console.log('GET /api/auth/me', req.user ? `User: ${req.user.email}` : 'No user');
+app.get('/auth/me', (req, res) => {
+    console.log('GET /auth/me', req.user ? `User: ${req.user.email}` : 'No user');
     
     if (req.user) {
         return res.status(200).json(req.user);
@@ -175,8 +175,8 @@ app.listen(PORT, () => {
     console.log('📍 Available Routes:');
     console.log('   /auth/google (OAuth initiate)');
     console.log('   /auth/google/callback (OAuth callback)');
-    console.log('   /api/auth/me (Get current user)');
-    console.log('   /api/auth/logout (Logout)');
+    console.log('   auth/me (Get current user)');
+    console.log('   /auth/logout (Logout)');
     console.log('=================================');
 
     console.log('=================================');
