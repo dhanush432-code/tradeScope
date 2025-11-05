@@ -27,7 +27,7 @@ import upstoxRouter from './routes/upstox.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://meek-tanuki-2563af.netlify.app';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://traddepad.netlify.app';
 
 // CORS Configuration
 const corsOptions = {
