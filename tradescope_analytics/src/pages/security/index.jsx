@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useAuth } from "../../contexts/AuthUserContext.jsx";
+import { useAuth } from "../../components/contexts/AuthUserContext";
 import Header from "../../components/ui/Header";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";

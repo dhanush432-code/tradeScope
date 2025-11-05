@@ -7,8 +7,8 @@ import "./styles/tailwind.css";
 import "./styles/index.css";
 
 // --- Import the Context Providers ---
-import { AuthProvider } from "./contexts/AuthUserContext"; // Use AuthContext, not AuthUserContext
-import { ThemeProvider } from "./contexts/ThemeContext";
+import  {AuthProvider}  from "./components/contexts/AuthUserContext"; // Use AuthContext, not AuthUserContext
+import { ThemeProvider } from "./components/contexts/ThemeContext";
 
 const container = document.getElementById("root");
 const root = createRoot(container);

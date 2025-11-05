@@ -19,7 +19,7 @@ import PremiumReturnsDistribution from "./components/PremiumReturnsDistribution"
 import Button from "../../components/ui/Button";
 import Icon from "../../components/AppIcon";
 import { useTrading } from "../../hooks/useTrading";
-import { useAuth } from "../../contexts/AuthUserContext.jsx";
+import { useAuth } from "../../components/contexts/AuthUserContext";
 
 const Analytics = () => {
   const { user } = useAuth();

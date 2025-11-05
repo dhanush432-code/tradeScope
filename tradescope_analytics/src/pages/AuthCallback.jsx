@@ -1,7 +1,7 @@
 // src/pages/AuthCallback.jsx
 import React, { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "../contexts/AuthUserContext.jsx";
+import { useAuth } from "../components/contexts/AuthUserContext";
 // You might want to import a notification system here if you have one
 // import { useNotificationCenter } from '../components/ui/NotificationCenter';
 

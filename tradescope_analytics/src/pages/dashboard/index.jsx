@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useAuth } from "../../contexts/AuthUserContext.jsx";
+import { useAuth } from "../../components/contexts/AuthUserContext";
 import { useTrading } from "../../hooks/useTrading";
 import MetricsCard from "./components/MetricsCard";
 import DailyPnLChart from "./components/DailyPnLChart";

@@ -5,7 +5,7 @@ import Input from "../../components/ui/Input";
 import Icon from "../../components/AppIcon";
 import LoginHeader from "../login/components/LoginHeader";
 import LoginFooter from "../login/components/LoginFooter";
-import { useAuth } from "../../contexts/AuthUserContext.jsx";
+import { useAuth } from "../../components/contexts/AuthUserContext";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");

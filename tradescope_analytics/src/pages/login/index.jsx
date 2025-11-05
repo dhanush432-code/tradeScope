@@ -5,7 +5,7 @@ import SecurityBadges from "./components/SecurityBadges";
 import SocialLogin from "./components/SocialLogin";
 import LoginHeader from "./components/LoginHeader";
 import LoginFooter from "./components/LoginFooter";
-import { useAuth } from "../../contexts/AuthUserContext.jsx";
+import { useAuth } from "../../components/contexts/AuthUserContext";
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);

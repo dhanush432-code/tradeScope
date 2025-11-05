@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import RegistrationForm from "./components/RegistrationForm";
 import RegistrationHeader from "./components/RegistrationHeader";
 import SecurityBadges from "./components/SecurityBadges";
-import { useAuth } from "../../contexts/AuthUserContext.jsx";
+import { useAuth } from "../../components/contexts/AuthUserContext";
 
 const Register = () => {
   const [isLoading, setIsLoading] = useState(false);

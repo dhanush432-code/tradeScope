@@ -9,7 +9,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 // --- Context Imports (Only need useAuth here, as providers are in index.jsx) ---
-import { useAuth } from "./contexts/AuthUserContext"; 
+import { useAuth } from "./components//contexts/AuthUserContext"; 
 
 // --- Page Imports ---
 import Dashboard from "./pages/dashboard";

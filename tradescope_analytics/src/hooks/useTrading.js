@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useAuth } from "../contexts/AuthUserContext.jsx";
+import { useAuth } from "../components/contexts/AuthUserContext";
 import { TradingService } from "../services/tradingService";
 // <-- NEW IMPORT: Gate API calls
 
