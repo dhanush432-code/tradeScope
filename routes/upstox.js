@@ -13,7 +13,7 @@ const UPSTOX_API_URL = 'https://api.upstox.com/v2';
 const UPSTOX_CLIENT_ID = process.env.UPSTOX_CLIENT_ID;
 const UPSTOX_CLIENT_SECRET = process.env.UPSTOX_CLIENT_SECRET;
 const UPSTOX_REDIRECT_URI = process.env.UPSTOX_REDIRECT_URI || 'https://trade-backend-gzw3.onrender.com/api/upstox/callback';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://trade-frontend-alpha.vercel.app';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://meek-tanuki-2563af.netlify.app';
 
 // Authentication middleware
 const isAuthenticated = (req, res, next) => {
