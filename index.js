@@ -1,5 +1,5 @@
 // ============================================
-// Backend/index.js - FIXED
+// Backend/index.js
 // ============================================
 
 import express from "express";
@@ -37,7 +37,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const corsOptions = {
     origin: FRONTEND_URL,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true, // ✅ This is correct
+    credentials: true, // ✅ This is critical for sending cookies
     allowedHeaders: 'Content-Type, Authorization',
 };
 
@@ -59,7 +59,6 @@ app.use(session({
         httpOnly: true,
         secure: isProduction, // ✅ true in production (HTTPS required)
         sameSite: isProduction ? 'none' : 'lax', // ✅ 'none' for cross-origin in production
-        domain: isProduction ? undefined : undefined // Let browser handle it
     }
 }));
 
@@ -71,7 +70,6 @@ app.use(passport.session());
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.path}`, req.user ? `User: ${req.user.email}` : 'Not authenticated');
     console.log('Session ID:', req.sessionID);
-    console.log('Session:', req.session);
     next();
 });
 
@@ -89,7 +87,7 @@ app.get('/auth/google',
 // Google OAuth callback
 app.get('/auth/google/callback',
     (req, res, next) => {
-        console.log('📍 Callback route hit');
+        console.log('📍 OAuth callback route hit');
         console.log('Query params:', req.query);
         next();
     },
@@ -101,7 +99,6 @@ app.get('/auth/google/callback',
         console.log('✅ Authentication successful');
         console.log('User:', req.user);
         console.log('Session ID:', req.sessionID);
-        console.log('Session:', req.session);
         res.redirect(`${FRONTEND_URL}/auth/callback?status=success`);
     }
 );
@@ -115,7 +112,6 @@ app.get('/api/auth/me', (req, res) => {
     console.log('GET /api/auth/me');
     console.log('Session ID:', req.sessionID);
     console.log('User:', req.user);
-    console.log('Session:', req.session);
     
     if (req.user) {
         return res.status(200).json({
