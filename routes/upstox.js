@@ -12,8 +12,8 @@ const prisma = new PrismaClient();
 const UPSTOX_API_URL = 'https://api.upstox.com/v2';
 const UPSTOX_CLIENT_ID = process.env.UPSTOX_CLIENT_ID;
 const UPSTOX_CLIENT_SECRET = process.env.UPSTOX_CLIENT_SECRET;
-const UPSTOX_REDIRECT_URI = process.env.UPSTOX_REDIRECT_URI || 'https://trade-backend-gzw3.onrender.com/api/upstox/callback';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://traddepad.netlify.appp';
+const UPSTOX_REDIRECT_URI = process.env.UPSTOX_REDIRECT_URI || 'http://localhost:3001/api/upstox/callback';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4028p';
 
 // Authentication middleware
 const isAuthenticated = (req, res, next) => {

@@ -28,7 +28,7 @@ import upstoxRouter from './routes/upstox.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://traddepad.netlify.app';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4028';
 
 // Determine if we're in production
 const isProduction = process.env.NODE_ENV === 'production';
