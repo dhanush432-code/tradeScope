@@ -1,5 +1,5 @@
 // ============================================
-// Backend/index.js
+// Backend/index.js - FIXED
 // ============================================
 
 import express from "express";
@@ -24,16 +24,20 @@ import strategiesRouter from './routes/strategies.js';
 import syncRouter from './routes/sync.js';
 import upstoxRouter from './routes/upstox.js';
 
-
 const app = express();
 const PORT = process.env.PORT || 3001;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://traddepad.netlify.app';
 
-// CORS Configuration
+// Determine if we're in production
+const isProduction = process.env.NODE_ENV === 'production';
+
+// ===================================================
+// CORS Configuration - FIXED for cross-origin cookies
+// ===================================================
 const corsOptions = {
     origin: FRONTEND_URL,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
+    credentials: true, // ✅ This is correct
     allowedHeaders: 'Content-Type, Authorization',
 };
 
@@ -43,7 +47,9 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session configuration
+// ===================================================
+// Session Configuration - FIXED for cross-origin
+// ===================================================
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-this',
     resave: false,
@@ -51,8 +57,9 @@ app.use(session({
     cookie: {
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         httpOnly: true,
-        secure: false, // Set to true in production with HTTPS
-        sameSite: 'lax'
+        secure: isProduction, // ✅ true in production (HTTPS required)
+        sameSite: isProduction ? 'none' : 'lax', // ✅ 'none' for cross-origin in production
+        domain: isProduction ? undefined : undefined // Let browser handle it
     }
 }));
 
@@ -63,6 +70,8 @@ app.use(passport.session());
 // Logging middleware for debugging
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.path}`, req.user ? `User: ${req.user.email}` : 'Not authenticated');
+    console.log('Session ID:', req.sessionID);
+    console.log('Session:', req.session);
     next();
 });
 
@@ -91,6 +100,7 @@ app.get('/auth/google/callback',
     (req, res) => {
         console.log('✅ Authentication successful');
         console.log('User:', req.user);
+        console.log('Session ID:', req.sessionID);
         console.log('Session:', req.session);
         res.redirect(`${FRONTEND_URL}/auth/callback?status=success`);
     }
@@ -100,17 +110,28 @@ app.get('/auth/google/callback',
 // API ROUTES (with /api prefix)
 // ===================================================
 
-// Auth API endpoints (these go under /api)
+// Auth API endpoints
 app.get('/api/auth/me', (req, res) => {
-    console.log('GET /api/auth/me', req.user ? `User: ${req.user.email}` : 'No user');
+    console.log('GET /api/auth/me');
+    console.log('Session ID:', req.sessionID);
+    console.log('User:', req.user);
+    console.log('Session:', req.session);
     
     if (req.user) {
-        return res.status(200).json(req.user);
+        return res.status(200).json({
+            success: true,
+            data: { user: req.user }
+        });
     }
-    res.status(401).json({ message: 'Unauthorized' });
+    
+    res.status(401).json({ 
+        success: false,
+        message: 'Unauthorized - No active session' 
+    });
 });
 
 app.post('/api/auth/logout', (req, res, next) => {
+    console.log('POST /api/auth/logout');
     req.logout((err) => {
         if (err) { 
             console.error('Logout error:', err);
@@ -120,7 +141,10 @@ app.post('/api/auth/logout', (req, res, next) => {
             if (err) {
                 console.error('Session destroy error:', err);
             }
-            res.status(200).json({ message: 'Logged out successfully' });
+            res.status(200).json({ 
+                success: true,
+                message: 'Logged out successfully' 
+            });
         });
     });
 });
@@ -134,7 +158,6 @@ app.use('/api/analytics', analyticsRouter);
 app.use('/api/strategies', strategiesRouter);
 app.use('/api/sync', syncRouter);
 app.use('/api/upstox', upstoxRouter);
-
 
 // ===================================================
 // ERROR HANDLING
@@ -169,16 +192,18 @@ app.listen(PORT, () => {
     console.log('=================================');
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📱 Frontend URL: ${FRONTEND_URL}`);
+    console.log(`🌍 Environment: ${isProduction ? 'Production' : 'Development'}`);
     console.log(`🔐 Google OAuth: /auth/google`);
     console.log(`📡 API Base: /api`);
+    console.log(`🍪 Cookie Settings:`);
+    console.log(`   - secure: ${isProduction}`);
+    console.log(`   - sameSite: ${isProduction ? 'none' : 'lax'}`);
     console.log('=================================');
     console.log('📍 Available Routes:');
     console.log('   /auth/google (OAuth initiate)');
     console.log('   /auth/google/callback (OAuth callback)');
     console.log('   /api/auth/me (Get current user)');
     console.log('   /api/auth/logout (Logout)');
-    console.log('=================================');
-
     console.log('=================================');
     console.log('🔍 Environment Check:');
     console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✅ Set' : '❌ Missing');
