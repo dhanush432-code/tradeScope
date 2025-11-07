@@ -13,7 +13,7 @@ const UPSTOX_API_URL = 'https://api.upstox.com/v2';
 const UPSTOX_CLIENT_ID = process.env.UPSTOX_CLIENT_ID;
 const UPSTOX_CLIENT_SECRET = process.env.UPSTOX_CLIENT_SECRET;
 const UPSTOX_REDIRECT_URI = process.env.UPSTOX_REDIRECT_URI || 'https://trade-backend-gzw3.onrender.com/api/upstox/callback';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://traddepad.netlify.app';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://traddepad.netlify.appp';
 
 // Authentication middleware
 const isAuthenticated = (req, res, next) => {
@@ -29,12 +29,9 @@ router.use(isAuthenticated);
 router.get('/status', async (req, res) => {
     try {
         // Check if user has Upstox broker connected
-        const upstoxBroker = await prisma.broker.findFirst({
-            where: {
-                userId: req.user.id,
-                name: { contains: 'Upstox', mode: 'insensitive' }
-            }
-        });
+        // Use raw query with correct column names
+        const result = await prisma.$queryRaw`SELECT * FROM brokers WHERE user_id = ${req.user.id} AND broker_name ILIKE '%Upstox%'`;
+        const upstoxBroker = result && result.length > 0 ? result[0] : null;
 
         if (!upstoxBroker) {
             return res.json({
@@ -207,37 +204,32 @@ router.get('/callback', async (req, res) => {
         const upstoxProfile = profileResponse.data.data;
         console.log('✅ Upstox profile fetched:', upstoxProfile.email);
 
-        // Save or update broker connection in database
-        const broker = await prisma.broker.upsert({
-            where: {
-                userId_name: {
-                    userId: userId,
-                    name: 'Upstox'
-                }
-            },
-            update: {
-                accessToken: access_token,
-                isActive: true,
-                metadata: {
-                    email: upstoxProfile.email,
-                    userName: upstoxProfile.user_name,
-                    userId: upstoxProfile.user_id,
-                    connectedAt: new Date().toISOString()
-                }
-            },
-            create: {
-                userId: userId,
-                name: 'Upstox',
-                accessToken: access_token,
-                isActive: true,
-                metadata: {
-                    email: upstoxProfile.email,
-                    userName: upstoxProfile.user_name,
-                    userId: upstoxProfile.user_id,
-                    connectedAt: new Date().toISOString()
-                }
-            }
-        });
+        // Save or update broker connection in database using raw queries
+        // First check if broker exists
+        const existingBrokers = await prisma.$queryRaw`SELECT * FROM brokers WHERE user_id = ${userId} AND broker_name = 'Upstox'`;
+        
+        if (existingBrokers && existingBrokers.length > 0) {
+            // Update existing broker
+            await prisma.$executeRaw`UPDATE brokers SET 
+                access_token = ${access_token},
+                is_active = true,
+                updated_at = NOW()
+            WHERE user_id = ${userId} AND broker_name = 'Upstox'`;
+            
+            // Fetch updated broker
+            const result = await prisma.$queryRaw`SELECT * FROM brokers WHERE user_id = ${userId} AND broker_name = 'Upstox'`;
+            const broker = result[0];
+        } else {
+            // Create new broker
+            await prisma.$executeRaw`INSERT INTO brokers 
+                (id, user_id, broker_name, access_token, is_active, created_at, updated_at)
+            VALUES 
+                (gen_random_uuid(), ${userId}, 'Upstox', ${access_token}, true, NOW(), NOW())`;
+            
+            // Fetch created broker
+            const result = await prisma.$queryRaw`SELECT * FROM brokers WHERE user_id = ${userId} AND broker_name = 'Upstox'`;
+            const broker = result[0];
+        }
 
         console.log('✅ Broker connection saved to database');
 
@@ -263,13 +255,9 @@ router.get('/callback', async (req, res) => {
 router.get('/profile', async (req, res) => {
     try {
         // Get broker connection from database
-        const broker = await prisma.broker.findFirst({
-            where: {
-                userId: req.user.id,
-                name: { contains: 'Upstox', mode: 'insensitive' },
-                isActive: true
-            }
-        });
+        // Use raw query with correct column names
+        const result = await prisma.$queryRaw`SELECT * FROM brokers WHERE user_id = ${req.user.id} AND broker_name ILIKE '%Upstox%' AND is_active = true`;
+        const broker = result && result.length > 0 ? result[0] : null;
 
         if (!broker || !broker.accessToken) {
             return res.status(400).json({
@@ -306,13 +294,9 @@ router.get('/profile', async (req, res) => {
 // ===================================================
 router.get('/holdings', async (req, res) => {
     try {
-        const broker = await prisma.broker.findFirst({
-            where: {
-                userId: req.user.id,
-                name: { contains: 'Upstox', mode: 'insensitive' },
-                isActive: true
-            }
-        });
+        // Use raw query with correct column names
+        const result = await prisma.$queryRaw`SELECT * FROM brokers WHERE user_id = ${req.user.id} AND broker_name ILIKE '%Upstox%' AND is_active = true`;
+        const broker = result && result.length > 0 ? result[0] : null;
 
         if (!broker || !broker.accessToken) {
             return res.status(400).json({
@@ -348,13 +332,9 @@ router.get('/holdings', async (req, res) => {
 // ===================================================
 router.post('/import-trades', async (req, res) => {
     try {
-        const broker = await prisma.broker.findFirst({
-            where: {
-                userId: req.user.id,
-                name: { contains: 'Upstox', mode: 'insensitive' },
-                isActive: true
-            }
-        });
+        // Use raw query with correct column names
+        const result = await prisma.$queryRaw`SELECT * FROM brokers WHERE user_id = ${req.user.id} AND broker_name ILIKE '%Upstox%' AND is_active = true`;
+        const broker = result && result.length > 0 ? result[0] : null;
 
         if (!broker || !broker.accessToken) {
             return res.status(400).json({
@@ -390,17 +370,12 @@ router.post('/import-trades', async (req, res) => {
 // ===================================================
 router.post('/disconnect', async (req, res) => {
     try {
-        // Update broker to inactive and clear tokens
-        await prisma.broker.updateMany({
-            where: {
-                userId: req.user.id,
-                name: { contains: 'Upstox', mode: 'insensitive' }
-            },
-            data: {
-                isActive: false,
-                accessToken: null
-            }
-        });
+        // Update broker to inactive and clear tokens using raw query
+        await prisma.$executeRaw`UPDATE brokers SET 
+            is_active = false,
+            access_token = NULL,
+            updated_at = NOW()
+        WHERE user_id = ${req.user.id} AND broker_name ILIKE '%Upstox%'`;
 
         console.log('✅ Upstox disconnected for user:', req.user.id);
 

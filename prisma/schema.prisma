@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,115 +11,102 @@ datasource db {
 }
 
 model User {
-  id              String           @id
-  email           String           @unique
-  displayName     String?          @map("display_name")
-  avatarUrl       String?          @map("avatar_url")
-  provider        String?
-  googleId        String?          @unique @map("google_id")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at")
-  brokers         Broker[]
-  strategies      Strategy[]
-  trades          Trade[]
+  id             String           @id
+  email          String           @unique
+  display_name   String?
+  avatar_url     String?
+  provider       String?
+  google_id      String?          @unique
+  created_at     DateTime         @default(now())
+  updated_at     DateTime         @updatedAt
+  brokers        Broker[]
   tradingAccounts TradingAccount[]
+  strategies     Strategy[]
+  trades         Trade[]
 
   @@map("users")
 }
 
 model Broker {
-  id              String           @id @default(uuid())
-  userId          String           @map("user_id")
-  name            String
-  brokerName      String?          @map("broker_name")
-  status          String           @default("inactive")
-  accountId       String?          @map("account_id")
-  apiKey          String?          @map("api_key")
-  apiSecret       String?          @map("api_secret")
-  accessToken     String?          @map("access_token")
-  refreshToken    String?          @map("refresh_token")
-  isActive        Boolean          @default(true) @map("is_active")
-  lastSyncAt      DateTime?        @map("last_sync_at")
-  lastSyncedAt    DateTime?        @map("last_synced_at")
-  recordsImported Int              @default(0) @map("records_imported")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trades          Trade[]
+  id            String     @id
+  user_id       String
+  broker_name   String
+  api_key       String?
+  api_secret    String?
+  access_token  String?
+  refresh_token String?
+  is_active     Boolean    @default(true)
+  last_synced_at DateTime? @db.Timestamp(3)
+  created_at    DateTime   @default(now()) @db.Timestamp(3)
+  updated_at    DateTime   @updatedAt @db.Timestamp(3)
+  user          User       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   tradingAccounts TradingAccount[]
 
-  @@unique([userId, name])
   @@map("brokers")
 }
 
 model TradingAccount {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  brokerId    String?  @map("broker_id")
-  accountName String   @map("account_name")
-  accountType String?  @map("account_type")
-  balance     Decimal  @default(0) @db.Decimal(15, 2)
-  currency    String   @default("USD") @db.VarChar(10)
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  id          String   @id
+  user_id     String
+  broker_id   String?
+  account_name String
+  account_type String?
+  balance     Float    @default(0)
+  currency    String   @default("USD")
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamp(3)
+  updated_at  DateTime @updatedAt @db.Timestamp(3)
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  broker      Broker?  @relation(fields: [broker_id], references: [id], onUpdate: Cascade)
   trades      Trade[]
-  broker      Broker?  @relation(fields: [brokerId], references: [id])
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("trading_accounts")
 }
 
 model Strategy {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
+  id          String   @id
+  user_id     String
   name        String
   description String?
   rules       String?
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamp(3)
+  updated_at  DateTime @updatedAt @db.Timestamp(3)
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
   trades      Trade[]
 
-  @@unique([userId, name])
   @@map("strategies")
 }
 
 model Trade {
-  id            String          @id @default(uuid())
-  userId        String          @map("user_id")
-  accountId     String?         @map("account_id")
-  strategyId    String?         @map("strategy_id")
-  brokerId      String?         @map("broker_id")
-  instrument    String          @db.VarChar(50)
-  assetClass    String?         @map("asset_class") @db.VarChar(50)
-  tradeType     String          @map("trade_type") @db.VarChar(10)
-  quantity      Decimal         @db.Decimal(15, 4)
-  entryPrice    Decimal         @map("entry_price") @db.Decimal(15, 4)
-  exitPrice     Decimal?        @map("exit_price") @db.Decimal(15, 4)
-  stopLoss      Decimal?        @map("stop_loss") @db.Decimal(15, 4)
-  takeProfit    Decimal?        @map("take_profit") @db.Decimal(15, 4)
-  tradeDate     DateTime        @map("trade_date")
-  entryDate     DateTime?       @map("entry_date")
-  exitDate      DateTime?       @map("exit_date")
-  pnl           Decimal?        @db.Decimal(15, 2)
-  pnlPercentage Decimal?        @map("pnl_percentage") @db.Decimal(10, 4)
-  pnlCurrency   String          @default("USD") @map("pnl_currency") @db.VarChar(10)
-  fees          Decimal         @default(0) @db.Decimal(15, 2)
-  status        String          @default("open") @db.VarChar(20)
-  process       String?         @db.VarChar(50)
-  notes         String?
-  tags          String?
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @default(now()) @updatedAt @map("updated_at")
-  account       TradingAccount? @relation(fields: [accountId], references: [id])
-  broker        Broker?         @relation(fields: [brokerId], references: [id])
-  strategy      Strategy?       @relation(fields: [strategyId], references: [id])
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id
+  user_id        String
+  account_id     String?
+  strategy_id    String?
+  instrument     String
+  asset_class    String?
+  trade_type     String
+  quantity       Float
+  entry_price    Float
+  exit_price     Float?
+  stop_loss      Float?
+  take_profit    Float?
+  trade_date     DateTime @db.Timestamp(3)
+  entry_date     DateTime? @db.Timestamp(3)
+  exit_date      DateTime? @db.Timestamp(3)
+  pnl            Float?
+  pnl_percentage Float?
+  pnl_currency   String   @default("USD")
+  fees           Float    @default(0)
+  status         String   @default("open")
+  process        String?
+  notes          String?
+  tags           String?
+  created_at     DateTime @default(now()) @db.Timestamp(3)
+  updated_at     DateTime @updatedAt @db.Timestamp(3)
+  user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  account        TradingAccount? @relation(fields: [account_id], references: [id], onUpdate: Cascade)
+  strategy       Strategy? @relation(fields: [strategy_id], references: [id], onUpdate: Cascade)
 
-  @@index([userId, tradeDate])
-  @@index([userId, status])
-  @@index([instrument])
   @@map("trades")
 }

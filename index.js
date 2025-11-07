@@ -2,14 +2,16 @@
 // Backend/index.js
 // ============================================
 
+// Load environment variables FIRST
+import dotenv from 'dotenv';
+dotenv.config({ path: './.env' });
+
 import express from "express";
 import session from 'express-session';
 import passport from 'passport';
 import cors from 'cors';
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config({ path: './.env' });
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Import passport configuration
 import './config/passport-setup.js';
@@ -46,6 +48,11 @@ app.use(cors(corsOptions));
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve favicon
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use('/favicon.ico', express.static(path.join(__dirname, '../Frontend/public/favicon.ico')));
 
 // ===================================================
 // Session Configuration - FIXED for cross-origin
@@ -89,6 +96,7 @@ app.get('/auth/google/callback',
     (req, res, next) => {
         console.log('📍 OAuth callback route hit');
         console.log('Query params:', req.query);
+        console.log('Headers:', req.headers);
         next();
     },
     passport.authenticate('google', {
