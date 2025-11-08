@@ -26,6 +26,7 @@ import analyticsRouter from './routes/analytics.js';
 import strategiesRouter from './routes/strategies.js';
 import syncRouter from './routes/sync.js';
 import upstoxRouter from './routes/upstox.js';
+import mfaRouter from './routes/mfa.js'; // Add this line for MFA routes
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -112,6 +113,9 @@ app.get('/auth/google/callback',
 // Use the consolidated auth router for login, register, and /me
 app.use('/api/auth', authRouter);
 
+// Use the MFA router for 2FA related endpoints
+app.use('/api/mfa', mfaRouter);
+
 // Create a reusable middleware for protecting API routes.
 // This will use our JwtStrategy to check for a valid 'Authorization: Bearer <token>' header.
 const requireAuth = passport.authenticate('jwt', { session: false });
@@ -165,5 +169,10 @@ app.listen(PORT, () => {
     console.log('  POST /api/auth/login');
     console.log('  GET  /api/auth/me (Protected)');
     console.log('  GET  /auth/google (OAuth Start)');
+    console.log('  POST /api/mfa/enable (Protected)');
+    console.log('  POST /api/mfa/disable (Protected)');
+    console.log('  POST /api/mfa/verify (Protected)');
+    console.log('  POST /api/mfa/generate-reset-otp');
+    console.log('  POST /api/mfa/verify-reset-otp');
     console.log('=================================');
 });

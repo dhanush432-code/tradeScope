@@ -11,23 +11,30 @@ datasource db {
 }
 
 model User {
-  id             String           @id     @default(uuid())
-  email          String           @unique
-  display_name   String?
-  avatar_url     String?
-  hashed_password  String?
-  provider       String?
-  google_id      String?          @unique
-  created_at     DateTime         @default(now())
-  updated_at     DateTime         @updatedAt
+  id              String           @id     @default(uuid())
+  email           String           @unique
+  display_name    String?
+  avatar_url      String?
+  hashed_password String?
+  provider        String?          // Remove default for now
+  google_id       String?          @unique
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
 
-  profile       UserProfile[]
-  brokers        Broker[]
+  // 2FA fields
+  two_factor_enabled Boolean      @default(false)
+  two_factor_secret  String?      // For TOTP (authenticator apps)
+  two_factor_backup_codes String[] // Backup codes for 2FA
+
+  profile         UserProfile[]
+  brokers         Broker[]
   tradingAccounts TradingAccount[]
-  strategies     Strategy[]
-  trades         Trade[]
+  strategies      Strategy[]
+  trades          Trade[]
 
-  @@unique([provider,google_id])
+  // Comment out or remove this line temporarily
+  // @@unique([provider, google_id])
+  
   @@map("users")
 }
 

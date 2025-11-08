@@ -120,4 +120,49 @@ router.get('/me', passport.authenticate('jwt', { session: false }), (req, res) =
     res.status(200).json({ user: req.user });
 });
 
+// ===================================
+//  4. RESET PASSWORD
+// ===================================
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { resetToken, newPassword } = req.body;
+    
+    // Verify the reset token
+    let decoded;
+    try {
+      decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+    
+    // Check that this is a password reset token
+    if (decoded.action !== 'password-reset') {
+      return res.status(400).json({ message: 'Invalid reset token' });
+    }
+    
+    // Find user by email (stored in userId field of token)
+    const user = await prisma.user.findUnique({
+      where: { email: decoded.userId }
+    });
+    
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+    
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    
+    // Update user's password
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { hashed_password: hashedPassword }
+    });
+    
+    res.status(200).json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Password Reset Error:', error);
+    res.status(500).json({ message: 'An error occurred while resetting password' });
+  }
+});
+
 export default router;
