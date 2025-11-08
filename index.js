@@ -1,5 +1,5 @@
 // ============================================
-// Backend/index.js
+// Backend/index.js - FINAL JWT VERSION
 // ============================================
 
 // Load environment variables FIRST
@@ -7,16 +7,17 @@ import dotenv from 'dotenv';
 dotenv.config({ path: './.env' });
 
 import express from "express";
-import session from 'express-session';
 import passport from 'passport';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import jwt from 'jsonwebtoken'; // Required for signing JWTs in the Google callback
 
-// Import passport configuration
+// Import passport configuration (this single import sets up all our strategies)
 import './config/passport-setup.js';
 
-// Import routes
+// Import all application routes
+import authRouter from './routes/auth.js';
 import tradesRouter from './routes/trades.js';
 import tradingRouter from './routes/trading.js';
 import brokersRouter from './routes/brokers.js';
@@ -34,18 +35,21 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4028';
 const isProduction = process.env.NODE_ENV === 'production';
 
 // ===================================================
-// CORS Configuration - FIXED for cross-origin cookies
+// CORS Configuration
 // ===================================================
+// This is configured correctly for a separate frontend that needs to send credentials (like a JWT)
 const corsOptions = {
     origin: FRONTEND_URL,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true, // ✅ This is critical for sending cookies
-    allowedHeaders: 'Content-Type, Authorization',
+    credentials: true,
+    allowedHeaders: 'Content-Type, Authorization', // Crucially, allow the 'Authorization' header
 };
-
 app.use(cors(corsOptions));
 
-// Body parsing middleware
+// ===================================================
+// Middleware
+// ===================================================
+// Body parsing for JSON and URL-encoded data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -54,137 +58,94 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use('/favicon.ico', express.static(path.join(__dirname, '../Frontend/public/favicon.ico')));
 
-// ===================================================
-// Session Configuration - FIXED for cross-origin
-// ===================================================
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key-change-this',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        httpOnly: true,
-        secure: isProduction, // ✅ true in production (HTTPS required)
-        sameSite: isProduction ? 'none' : 'lax', // ✅ 'none' for cross-origin in production
-    }
-}));
-
-// Passport initialization
+// Initialize Passport for stateless JWT authentication.
+// We NO LONGER use express-session or passport.session().
 app.use(passport.initialize());
-app.use(passport.session());
 
-// Logging middleware for debugging
+// Optional: Logging middleware for debugging
 app.use((req, res, next) => {
-    console.log(`${req.method} ${req.path}`, req.user ? `User: ${req.user.email}` : 'Not authenticated');
-    console.log('Session ID:', req.sessionID);
+    console.log(`${req.method} ${req.path}`);
     next();
 });
 
 // ===================================================
-// AUTHENTICATION ROUTES (OAuth flow - no /api prefix)
+// OAUTH ROUTES (Stateless JWT Flow)
 // ===================================================
+// These routes handle the initial redirect to and callback from Google.
 
-// Initiate Google OAuth
+// 1. Initiate Google OAuth
 app.get('/auth/google',
     passport.authenticate('google', {
-        scope: ['profile', 'email']
+        scope: ['profile', 'email'],
+        session: false // Explicitly tell passport NOT to create a session
     })
 );
 
-// Google OAuth callback
+// 2. Google OAuth callback
 app.get('/auth/google/callback',
-    (req, res, next) => {
-        console.log('📍 OAuth callback route hit');
-        console.log('Query params:', req.query);
-        console.log('Headers:', req.headers);
-        next();
-    },
     passport.authenticate('google', {
-        failureRedirect: `${FRONTEND_URL}/auth/callback?status=failure`,
-        failureMessage: true
+        session: false, // Again, no sessions
+        failureRedirect: `${FRONTEND_URL}/login?error=google-auth-failed`,
     }),
     (req, res) => {
-        console.log('✅ Authentication successful');
-        console.log('User:', req.user);
-        console.log('Session ID:', req.sessionID);
-        res.redirect(`${FRONTEND_URL}/auth/callback?status=success`);
+        // If this callback is reached, the user has been authenticated by Google
+        // and the GoogleStrategy has found or created a user record in our database.
+        // The user object is now available at `req.user`.
+
+        // Generate a JWT for this user.
+        const token = jwt.sign(
+            { userId: req.user.id, email: req.user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' } // Set an expiration for the token
+        );
+
+        // Redirect the user back to the frontend to a special callback URL,
+        // passing the token as a query parameter.
+        res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}`);
     }
 );
 
 // ===================================================
-// API ROUTES (with /api prefix)
+// API ROUTES (/api prefix)
 // ===================================================
 
-// Auth API endpoints
-app.get('/api/auth/me', (req, res) => {
-    console.log('GET /api/auth/me');
-    console.log('Session ID:', req.sessionID);
-    console.log('User:', req.user);
-    
-    if (req.user) {
-        return res.status(200).json({
-            success: true,
-            data: { user: req.user }
-        });
-    }
-    
-    res.status(401).json({ 
-        success: false,
-        message: 'Unauthorized - No active session' 
-    });
-});
+// Use the consolidated auth router for login, register, and /me
+app.use('/api/auth', authRouter);
 
-app.post('/api/auth/logout', (req, res, next) => {
-    console.log('POST /api/auth/logout');
-    req.logout((err) => {
-        if (err) { 
-            console.error('Logout error:', err);
-            return next(err); 
-        }
-        req.session.destroy((err) => {
-            if (err) {
-                console.error('Session destroy error:', err);
-            }
-            res.status(200).json({ 
-                success: true,
-                message: 'Logged out successfully' 
-            });
-        });
-    });
-});
+// Create a reusable middleware for protecting API routes.
+// This will use our JwtStrategy to check for a valid 'Authorization: Bearer <token>' header.
+const requireAuth = passport.authenticate('jwt', { session: false });
 
-// Other API routes
-app.use('/api/trades', tradesRouter);
-app.use('/api/trading', tradingRouter);
-app.use('/api/brokers', brokersRouter);
-app.use('/api/portfolio', portfolioRouter);
-app.use('/api/analytics', analyticsRouter);
-app.use('/api/strategies', strategiesRouter);
-app.use('/api/sync', syncRouter);
-app.use('/api/upstox', upstoxRouter);
+// Apply the 'requireAuth' middleware to all data-related API routes.
+// Any request to these endpoints MUST include a valid JWT.
+app.use('/api/trades', requireAuth, tradesRouter);
+app.use('/api/trading', requireAuth, tradingRouter);
+app.use('/api/brokers', requireAuth, brokersRouter);
+app.use('/api/portfolio', requireAuth, portfolioRouter);
+app.use('/api/analytics', requireAuth, analyticsRouter);
+app.use('/api/strategies', requireAuth, strategiesRouter);
+app.use('/api/sync', requireAuth, syncRouter);
+app.use('/api/upstox', requireAuth, upstoxRouter);
 
 // ===================================================
 // ERROR HANDLING
 // ===================================================
 
-// 404 handler
+// 404 handler for any routes not matched above
 app.use((req, res) => {
-    console.log('❌ 404 - Route not found:', req.method, req.path);
     res.status(404).json({ message: 'Route not found' });
 });
 
-// Error handler
+// Global error handler
 app.use((err, req, res, next) => {
     console.error('========================================');
-    console.error('❌ EXPRESS ERROR HANDLER:');
-    console.error('Error:', err.message);
-    console.error('Stack:', err.stack);
+    console.error('❌ GLOBAL ERROR HANDLER CAUGHT AN ERROR:');
+    console.error(err.stack);
     console.error('========================================');
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
         error: 'Internal Server Error',
         message: err.message,
-        details: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
 });
 
@@ -197,22 +158,12 @@ app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📱 Frontend URL: ${FRONTEND_URL}`);
     console.log(`🌍 Environment: ${isProduction ? 'Production' : 'Development'}`);
-    console.log(`🔐 Google OAuth: /auth/google`);
-    console.log(`📡 API Base: /api`);
-    console.log(`🍪 Cookie Settings:`);
-    console.log(`   - secure: ${isProduction}`);
-    console.log(`   - sameSite: ${isProduction ? 'none' : 'lax'}`);
+    console.log(`🔐 Authentication Strategy: Stateless JWT`);
     console.log('=================================');
-    console.log('📍 Available Routes:');
-    console.log('   /auth/google (OAuth initiate)');
-    console.log('   /auth/google/callback (OAuth callback)');
-    console.log('   /api/auth/me (Get current user)');
-    console.log('   /api/auth/logout (Logout)');
-    console.log('=================================');
-    console.log('🔍 Environment Check:');
-    console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✅ Set' : '❌ Missing');
-    console.log('SESSION_SECRET:', process.env.SESSION_SECRET ? '✅ Set' : '❌ Missing');
-    console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? '✅ Set' : '❌ Missing');
-    console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? '✅ Set' : '❌ Missing');
+    console.log('API Endpoints:');
+    console.log('  POST /api/auth/register');
+    console.log('  POST /api/auth/login');
+    console.log('  GET  /api/auth/me (Protected)');
+    console.log('  GET  /auth/google (OAuth Start)');
     console.log('=================================');
 });
